@@ -575,7 +575,7 @@ namespace TTD {
 		BasicErrorReporting errorReporting;
 
 	public:
-		ReplayEngine();
+		ReplayEngine(const wchar_t* ttdReplayPath=L"TTDReplay.dll", const wchar_t* ttdReplayCpuPath=L"TTDReplayCPU.dll");
 
 		std::vector<std::string> GetErrors() const
 		{
