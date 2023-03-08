@@ -236,12 +236,12 @@ int main(int argc, char** argv)
 			break;
 		}
 
-		new_context = ttdcursor.GetContextx86_64();
+		new_context = ttdcursor.GetContextx86_64(0, new_context);
 		if (new_context->Rip < addr_min || new_context->Rip >= addr_max)
 			continue;
 		dumpContext(fdesc, old_context, new_context, ttdcursor);
 		cleanMemsinfo();
-		old_context = new_context;
+		std::swap(old_context, new_context);
 
 		i++;
 		if (i % 0x1000 == 0) {
@@ -249,4 +249,7 @@ int main(int argc, char** argv)
 		}
 	}
 	fdesc.close();
+
+	ttdcursor.FreeContextBuffer(old_context);
+	ttdcursor.FreeContextBuffer(new_context);
 }

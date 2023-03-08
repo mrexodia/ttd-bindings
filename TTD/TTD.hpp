@@ -4,6 +4,8 @@
 
 namespace TTD {
 
+	using ContextBuffer = void*; // TODO: smart pointer?
+
 	typedef struct TTD_Replay_ReplayEngine TTD_Replay_ReplayEngine;
 
 	typedef struct Position {
@@ -444,56 +446,46 @@ namespace TTD {
 		struct TTD_Replay_ThreadInfo* GetThreadInfo(unsigned int ThreadId);
 
 		/*!
-		 * \brief Get Thread context (current thread) as when you use GetThreadContext API
-		 * \see	https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getthreadcontext
-		 * \return	Context structure depending of the target platform
+		 * \brief Allocate a context buffer. Use FreeContextBuffer to free it
+		 * \return	Context buffer (throws std::bad_alloc if it fails to allocate)
 		 */
-		void* GetCrossPlatformContext();
+		ContextBuffer AllocateContextBuffer();
+
+		/*!
+		 * \brief Allocate a context buffer. Use FreeContextBuffer to free it
+		 * \param	contextBuffer	Context buffer to free
+		 */
+		void FreeContextBuffer(ContextBuffer contextBuffer);
 
 		/*!
 		 * \brief Get Thread context for a particular thread id as when you use GetThreadContext API
 		 * \see	https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getthreadcontext
-		 * \param	threadid	thread id
+		 * \param	threadid	thread id (zero for current thread)
+		 * \param	contextBuffer	buffer from AllocateContextBuffer (pass nullptr to allocate one)
 		 * \return	Context structure depending of the target platform
 		 */
-		void* GetCrossPlatformContext(uint32_t threadId);
-
-		/*!
-		 * \brief	Get thread context, for the current one, for x86 target arch
-		 * \return	x86 thread context
-		 */
-		inline PWOW64_CONTEXT GetContextx86()
-		{
-			return static_cast<PWOW64_CONTEXT>(GetCrossPlatformContext());
-		}
+		void* GetCrossPlatformContext(uint32_t threadId = 0, ContextBuffer contextBuffer = nullptr);
 
 		/*!
 		 * \brief	Get thread context for x86 target arch
-		 * \param	threadid	thread id
+		 * \param	threadid	thread id (zero for current thread)
+		 * \param	contextBuffer	buffer from AllocateContextBuffer (pass nullptr to allocate one)
 		 * \return	x86_64 thread context
 		 */
-		inline PWOW64_CONTEXT GetContextx86(uint32_t threadId)
+		PWOW64_CONTEXT GetContextx86(uint32_t threadId = 0, ContextBuffer contextBuffer = nullptr)
 		{
-			return static_cast<PWOW64_CONTEXT>(GetCrossPlatformContext(threadId));
-		}
-
-		/*!
-		 * \brief	Get thread context, for the current one, for x86_64 target arch
-		 * \return	x86_64 thread context
-		 */
-		inline PCONTEXT GetContextx86_64()
-		{
-			return static_cast<PCONTEXT>(GetCrossPlatformContext());
+			return static_cast<PWOW64_CONTEXT>(GetCrossPlatformContext(threadId, contextBuffer));
 		}
 
 		/*!
 		 * \brief	Get thread context for x86_64 target arch
-		 * \param	threadid	thread id
+		 * \param	threadid	thread id (zero for current thread)
+		 * \param	contextBuffer	buffer from AllocateContextBuffer (pass nullptr to allocate one)
 		 * \return	x86_64 thread context
 		 */
-		inline PCONTEXT GetContextx86_64(uint32_t threadId)
+		inline PCONTEXT GetContextx86_64(uint32_t threadId = 0, ContextBuffer contextBuffer = nullptr)
 		{
-			return static_cast<PCONTEXT>(GetCrossPlatformContext(threadId));
+			return static_cast<PCONTEXT>(GetCrossPlatformContext(threadId, contextBuffer));
 		}
 
 		struct MemoryBuffer* QueryMemoryBuffer(GuestAddress address, unsigned __int64 size);

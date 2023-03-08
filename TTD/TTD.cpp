@@ -42,17 +42,24 @@ namespace TTD {
 		return this->cursor->ICursor->GetThreadInfo(cursor, ThreadId);
 	}
 
-	void* Cursor::GetCrossPlatformContext()
+	void* Cursor::AllocateContextBuffer()
 	{
-		return this->GetCrossPlatformContext(0);
+		void* ctx = malloc(0xA70);
+		if (ctx == nullptr)
+			throw std::bad_alloc();
+		return ctx;
 	}
 
-	//The caller should free ctxt after call GetCrossPlatformContext function
-	void* Cursor::GetCrossPlatformContext(uint32_t threadId) {
-		void* ctxt = malloc(0xA70);
-		if (NULL == ctxt)
-			return NULL;
-		return this->cursor->ICursor->GetCrossPlatformContext(cursor, ctxt, threadId);
+	void Cursor::FreeContextBuffer(void* contextBuffer)
+	{
+		free(contextBuffer);
+	}
+
+	void* Cursor::GetCrossPlatformContext(uint32_t threadId, void* contextBuffer)
+	{
+		if (contextBuffer == nullptr)
+			contextBuffer = AllocateContextBuffer();
+		return this->cursor->ICursor->GetCrossPlatformContext(cursor, contextBuffer, threadId);
 	}
 
 	//The caller should free memorybuffer and memorybuffer->data (same value as buf->dst_buffer) after call QueryMemoryBuffer function
