@@ -77,27 +77,32 @@ void dumpContext(std::ofstream& fdesc, CONTEXT* old, CONTEXT* newc, TTD::Cursor 
 	DUMP_REGISTER(R15);
 	DUMP_REGISTER(Rip);
 
+	static std::vector<uint8_t> memoryTemp;
+
 	for (auto itMems = memsinfo.begin(); itMems != memsinfo.end(); itMems++) {
-		//printf("\nMEMS:%x:%x:%x\n", (*itMems)->addr, (*itMems)->size, (*itMems)->flags);
-		struct TTD::MemoryBuffer* memorybuffer = ttdcursor.QueryMemoryBuffer((*itMems)->addr, (*itMems)->size);
-		if (memorybuffer->data == NULL) {
+		auto addr = (*itMems)->addr;
+		auto size = (*itMems)->size;
+		auto flags = (*itMems)->flags;
+
+		memoryTemp.resize(size);
+		if (!ttdcursor.ReadMemory(addr, memoryTemp.data(), memoryTemp.size()))
+		{
 			std::wcerr << "Query Memory FAIL: memory do not exists in trace";
 			continue;
 		}
-		if ((*itMems)->flags == 1) { // WRITE
-			fdesc << ",mw=0x" << std::hex << memorybuffer->addr << ":";
+
+		if (flags == 1) { // WRITE
+			fdesc << ",mw=0x" << std::hex << addr << ":";
 		}
-		else if ((*itMems)->flags == 0) { // READ
-			fdesc << ",mr=0x" << std::hex << memorybuffer->addr << ":";
+		else if (flags == 0) { // READ
+			fdesc << ",mr=0x" << std::hex << addr << ":";
 		}
 		else {
-			std::wcerr << "Unexpected: flags " << std::hex << (*itMems)->flags << "\n";
+			std::wcerr << "Unexpected: flags " << std::hex << flags << "\n";
 		}
-		for (int i = 0; i < (*itMems)->size; i++) {
-			fdesc << std::setw(2) << std::setfill('0') << std::hex << std::uppercase << (unsigned int)(((unsigned char*)memorybuffer->data)[i]);
+		for (int i = 0; i < size; i++) {
+			fdesc << std::setw(2) << std::setfill('0') << std::hex << std::uppercase << memoryTemp[i];
 		}
-		free(memorybuffer->data);
-		free(memorybuffer);
 	}
 	fdesc << "\n";
 }

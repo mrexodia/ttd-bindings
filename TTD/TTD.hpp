@@ -488,6 +488,7 @@ namespace TTD {
 			return static_cast<PCONTEXT>(GetCrossPlatformContext(threadId, contextBuffer));
 		}
 
+		bool ReadMemory(GuestAddress address, void* dst, size_t size);
 		struct MemoryBuffer* QueryMemoryBuffer(GuestAddress address, unsigned __int64 size);
 		struct TTD_Replay_ICursorView_ReplayResult* ReplayForward(struct TTD_Replay_ICursorView_ReplayResult* replay_result_out, struct Position* posMax, unsigned __int64 stepCount);
 		struct TTD_Replay_ICursorView_ReplayResult* ReplayBackward(struct TTD_Replay_ICursorView_ReplayResult* replay_result_out, struct Position* posMin, unsigned __int64 stepCount);

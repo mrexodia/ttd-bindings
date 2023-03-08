@@ -62,18 +62,28 @@ namespace TTD {
 		return this->cursor->ICursor->GetCrossPlatformContext(cursor, contextBuffer, threadId);
 	}
 
+	bool Cursor::ReadMemory(GuestAddress address, void* dst, size_t size)
+	{
+		TBuffer buf;
+		buf.dst_buffer = dst;
+		buf.size = size;
+
+		MemoryBuffer memorybuffer = {};
+		this->cursor->ICursor->QueryMemoryBuffer(cursor, &memorybuffer, address, &buf, 0);
+		return memorybuffer.data != nullptr;
+	}
+
 	//The caller should free memorybuffer and memorybuffer->data (same value as buf->dst_buffer) after call QueryMemoryBuffer function
 	struct MemoryBuffer* Cursor::QueryMemoryBuffer(GuestAddress address, unsigned __int64 size) {
 		struct MemoryBuffer* memorybuffer = (struct MemoryBuffer*)malloc(sizeof(struct MemoryBuffer));
-		struct TBuffer* buf = (struct TBuffer*)malloc(sizeof(struct TBuffer));
-		if (NULL == buf || NULL == memorybuffer)
+		TBuffer buf;
+		if (NULL == memorybuffer)
 			return NULL;
-		buf->size = size;
-		buf->dst_buffer = (void*)malloc(size);
-		if (NULL == buf->dst_buffer)
+		buf.size = size;
+		buf.dst_buffer = (void*)malloc(size);
+		if (NULL == buf.dst_buffer)
 			return NULL;
-		this->cursor->ICursor->QueryMemoryBuffer(cursor, memorybuffer, address, buf, 0);
-		free(buf);
+		this->cursor->ICursor->QueryMemoryBuffer(cursor, memorybuffer, address, &buf, 0);
 		return memorybuffer;
 	}
 
