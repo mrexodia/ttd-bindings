@@ -147,12 +147,23 @@ namespace TTD {
 
 		hinstLib = LoadLibrary(TEXT("TTDReplay.dll"));
 		if (hinstLib == NULL) {
-			throw std::exception("Unable to find TTDReplay.dll");
+			throw std::runtime_error("Unable to find TTDReplay.dll");
 		}
+		
 		InitiateReplayEngineHandshake = (PROC_Initiate)GetProcAddress(hinstLib, "InitiateReplayEngineHandshake");
+		if (InitiateReplayEngineHandshake == nullptr) {
+			throw std::runtime_error("Cannot find InitiateReplayEngineHandshake in TTDReplay.dll");
+		}
+
 		CreateReplayEngineWithHandshake = (PROC_Create)GetProcAddress(hinstLib, "CreateReplayEngineWithHandshake");
+		if (CreateReplayEngineWithHandshake == nullptr) {
+			throw std::runtime_error("Cannot find CreateReplayEngineWithHandshake in TTDReplay.dll");
+		}
 
 		int result = InitiateReplayEngineHandshake("DbgEng", Source);
+		if (result != 0) {
+			throw std::runtime_error("Unexpected result from InitiateReplayEngineHandshake");
+		}
 
 		strncpy_s(Destination, (char*)Source, 0x2F);
 		for (int i = 0; i < 2; ++i) {
@@ -172,7 +183,12 @@ namespace TTD {
 
 		void* instance;
 		result = CreateReplayEngineWithHandshake(tmp, &instance, version_guid);
+		if (result != 0) {
+			throw std::runtime_error("CreateReplayEngineWithHandshake failed (wrong version?)");
+		}
+		
 		this->engine = (TTD_Replay_ReplayEngine*)instance;
+		this->engine->IReplayEngine->RegisterDebugModeAndLogging(this->engine, DefaultMode, &errorReporting);
 	}
 
 	/**** Wrapping around the vftable ****/

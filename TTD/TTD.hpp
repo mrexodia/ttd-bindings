@@ -1,6 +1,8 @@
 #pragma once
-#include <vector>
 #include <Windows.h>
+
+#include <vector>
+#include <string>
 
 namespace TTD {
 
@@ -123,6 +125,67 @@ namespace TTD {
 	  *((_QWORD *)this + 2) = &TTD::Replay::Cursor::`vftable'{for `ICursor_v1::ICursor'};
 	  *((_QWORD *)this + 3) = &TTD::Replay::Cursor::`vftable'{for `ICursor_v2::ICursor'};
 	*/
+
+	struct std_string
+	{
+		union
+		{
+			LPSTR ptr;		// 00
+			char buffer[16];	// 08
+		};
+		size_t size;			// 10
+		size_t allocated;		// 18
+
+		__forceinline const char* c_str() const
+		{
+			if (allocated > 10)
+				return ptr;
+			else
+				return buffer;
+		}
+	};
+
+	// Error output callbacks for internal TTD errors
+	// Reference: https://github.com/commial/ttd-bindings/issues/22
+	class ErrorReporting
+	{
+	public:
+		virtual ~ErrorReporting() {}
+		virtual void PrintError(const std_string& error) { }
+		virtual void VPrintError(const char* format, va_list args) { }
+	};
+	static_assert(sizeof(ErrorReporting) == sizeof(ULONG_PTR), "Should be equal the size of a vftable");
+
+	class BasicErrorReporting : public ErrorReporting
+	{
+		std::vector<std::string> mErrors;
+
+	public:
+		void PrintError(const std_string& error) override
+		{
+			std::string s = error.c_str();
+			while (!s.empty() && isspace(s.back()))
+				s.pop_back();
+			if(!s.empty())
+				mErrors.push_back(s);
+		}
+		
+		void VPrintError(const char* format, va_list args) override
+		{
+			char error[2048];
+			auto len = vsprintf_s(error, format, args);
+			std_string s;
+			s.ptr = error;
+			s.size = len;
+			s.allocated = len + 1;
+			PrintError(s);
+		}
+		
+		std::vector<std::string> GetErrors() const
+		{
+			return mErrors;
+		}
+	};
 
 	typedef struct TTD_Replay_ICursor_vftable {
 		//  void *___7Cursor_Replay_TTD__6BICursor_12_@;
@@ -292,6 +355,11 @@ namespace TTD {
 	  *((_QWORD *)this + 5) = &TTD::Replay::ReplayEngine::`vftable'{for `IReplayEngine_v4::IReplayEngine'};
 	*/
 
+	enum DebugModeType
+	{
+		DefaultMode = 0,
+	};
+
 	typedef struct TTD_Replay_IReplayEngine_vftable {
 		//const void* (__fastcall* ___7ReplayEngine_Replay_TTD__6BIReplayEngine_12_@)(TTD::Replay::ReplayEngine* __hidden this, const struct _GUID*);
 		void* unk1;
@@ -368,7 +436,7 @@ namespace TTD {
 		//	struct TTD::Replay::IndexFileStats(__high* _GetIndexFileStats_ReplayEngine_Replay_TTD__UEBA_AUIndexFileStats_23_XZ)(void);
 		void* unk46;
 		//	__int64(__fastcall* _RegisterDebugModeAndLogging_ReplayEngine_Replay_TTD__UEAAXW4DebugModeType_23_PEAVErrorReporting_3__Z)(__int64, int, __int64);
-		void* unk47;
+		__int64(__fastcall* RegisterDebugModeAndLogging)(TTD_Replay_ReplayEngine* self, DebugModeType type, ErrorReporting* errorReporting);
 		//	const struct TTD::Replay::IEngineInternals* (__fastcall* _GetInternals_ReplayEngine_Replay_TTD__UEBAPEBVIEngineInternals_23_XZ)(TTD::Replay::ReplayEngine* __hidden this);
 		void* unk48;
 		//	const struct TTD::Replay::IEngineInternals* (__fastcall* anonymous_1)(TTD::Replay::ReplayEngine* __hidden this);
@@ -503,10 +571,16 @@ namespace TTD {
 	class ReplayEngine {
 
 	private:
-		TTD_Replay_ReplayEngine* engine;
+		TTD_Replay_ReplayEngine* engine = nullptr;
+		BasicErrorReporting errorReporting;
 
 	public:
 		ReplayEngine();
+
+		std::vector<std::string> GetErrors() const
+		{
+			return errorReporting.GetErrors();
+		}
 
 		/**** Wrapping around the vftable ****/
 		bool Initialize(const wchar_t* trace_filename);
